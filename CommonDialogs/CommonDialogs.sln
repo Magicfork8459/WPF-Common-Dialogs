@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ColorDialog", "ColorDialog\ColorDialog.csproj", "{A1312BB9-4491-49CF-A5FE-2AB4F6E5048A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InteractiveTest", "InteractiveTest\InteractiveTest.csproj", "{68A05B9A-3150-4460-B4DB-8FFF8961A48F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1312BB9-4491-49CF-A5FE-2AB4F6E5048A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1312BB9-4491-49CF-A5FE-2AB4F6E5048A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1312BB9-4491-49CF-A5FE-2AB4F6E5048A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1312BB9-4491-49CF-A5FE-2AB4F6E5048A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68A05B9A-3150-4460-B4DB-8FFF8961A48F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68A05B9A-3150-4460-B4DB-8FFF8961A48F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68A05B9A-3150-4460-B4DB-8FFF8961A48F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68A05B9A-3150-4460-B4DB-8FFF8961A48F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D13E35FF-93E6-4A03-B131-FC7D65E6F258}
+	EndGlobalSection
+EndGlobal

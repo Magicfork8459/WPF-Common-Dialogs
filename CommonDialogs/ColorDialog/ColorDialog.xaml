@@ -1,0 +1,74 @@
+﻿<Window x:Class="Monkeyshines.ColorDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Monkeyshines"
+        mc:Ignorable="d"
+        Title="Color Dialog" Height="450" Width="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <!--<ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>-->
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Column="0" Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <GroupBox Header="Current" Grid.Column="0">
+                    <StackPanel>
+                        <DockPanel>
+                            <local:Swatch x:Name="SwatchCurrent" Width="24" Height="24" StrokeThickness="1" Margin="5" />
+                            <TextBox Name="TextBoxHexCode" DockPanel.Dock="Right" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="9">
+                            </TextBox>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Name="GroupBoxCachedSwatches" Header="Cached" Grid.Column="1">
+                    <StackPanel Name="PanelCachedSwatches" Orientation="Horizontal"/>
+                </GroupBox>
+            </Grid>
+            <DockPanel Grid.Column="0" Grid.Row="1">
+                <GroupBox Name="GroupBoxShadeSelection" Header="Shades">
+                    <StackPanel Orientation="Horizontal">
+                        <local:Swatch x:Name="SwatchHexDark75" Width="24" Height="24" StrokeThickness="1" Margin="5"/>
+                        <local:Swatch x:Name="SwatchHexDark50" Width="24" Height="24" StrokeThickness="1" Margin="5"/>
+                        <local:Swatch x:Name="SwatchHexDark25" Width="24" Height="24" StrokeThickness="1" Margin="5"/>
+                        <local:Swatch x:Name="SwatchHexLight25" Width="24" Height="24" StrokeThickness="1" Margin="5"/>
+                        <local:Swatch x:Name="SwatchHexLight50" Width="24" Height="24" StrokeThickness="1" Margin="5"/>
+                        <local:Swatch x:Name="SwatchHexLight75" Width="24" Height="24" StrokeThickness="1" Margin="5"/>
+                    </StackPanel>
+                </GroupBox>
+            </DockPanel>
+        </Grid>
+        <GroupBox Grid.Row="0" Grid.Column="1" Header="Red">
+        
+        </GroupBox>
+        <GroupBox Grid.Row="1" Grid.Column="1" Header="Green">
+
+        </GroupBox>
+        <GroupBox Grid.Row="2" Grid.Column="1" Header="Blue">
+
+        </GroupBox>
+        <GroupBox Grid.Row="3" Grid.Column="1" Header="Spectrum">
+
+        </GroupBox>
+    </Grid>
+</Window>
