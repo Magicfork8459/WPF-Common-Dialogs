@@ -36,7 +36,9 @@
                     <StackPanel>
                         <DockPanel>
                             <local:Swatch x:Name="SwatchCurrent" Width="24" Height="24" StrokeThickness="1" Margin="5" />
-                            <TextBox Name="TextBoxHexCode" DockPanel.Dock="Right" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="9">
+                            <Label Content="#" VerticalContentAlignment="Center"/>
+                            <TextBox Name="TextBoxAlphaHexCode" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="2" ToolTip="2 digit alpha code (FF if empty)" MinWidth="32"/>
+                            <TextBox Name="TextBoxHexCode" DockPanel.Dock="Right" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="8" ToolTip="6 digit color code">
                             </TextBox>
                         </DockPanel>
                     </StackPanel>
@@ -67,8 +69,9 @@
         <GroupBox Grid.Row="2" Grid.Column="1" Header="Blue">
 
         </GroupBox>
-        <GroupBox Grid.Row="3" Grid.Column="1" Header="Spectrum">
+        <GroupBox Grid.Row="3" Grid.Column="1" Header="Alpha"/>
+        <!--<GroupBox Grid.Row="3" Grid.Column="1" Header="Spectrum">
 
-        </GroupBox>
+        </GroupBox>-->
     </Grid>
 </Window>

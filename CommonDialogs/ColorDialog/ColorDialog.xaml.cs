@@ -24,7 +24,7 @@ namespace Monkeyshines
 {
     public partial class ColorDialog : Window
     {
-        private static ValidationRuleHexCode validateHexCode = new ValidationRuleHexCode();
+        private static ValidationRuleHexCode validateHexCode = new ValidationRuleHexCode() { CharacterCount = 6 };
         //! Default White
 
         //! Black and White by default
@@ -55,7 +55,7 @@ namespace Monkeyshines
             TextBox asTextBox = (TextBox) sender;
             if(validateHexCode.Validate(asTextBox.Text, System.Globalization.CultureInfo.CurrentUICulture).IsValid)
             {
-                SwatchCurrent.Fill = new SolidColorBrush((Color) ColorConverter.ConvertFromString(asTextBox.Text));
+                SwatchCurrent.Fill = new SolidColorBrush((Color) ColorConverter.ConvertFromString(asTextBox.Text.Insert(0, "#FF")));
                 SwatchCurrent.UpdateLayout();
             }
             else
