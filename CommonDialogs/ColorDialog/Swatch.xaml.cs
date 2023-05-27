@@ -20,44 +20,59 @@ using System.Windows.Shapes;
 
 namespace Monkeyshines
 {
+    public class SwatchBrushEventArgs : EventArgs
+    {
+        public Brush Changed { get; set; }
+
+        public SwatchBrushEventArgs(Brush changed)
+        {
+            Changed = changed;
+        }
+    }
+
+    public delegate void SwatchBrushEventHandler(object sender, SwatchBrushEventArgs e);
+
     //! Putting it in the stackpanel broke the rendering
-    public partial class Swatch : UserControl
+    public partial class Swatch : UserControl, ICloneable
     {
         private Brush fill = Brushes.White;
-        public Brush Fill { 
+        public Brush Fill {
             get
             {
                 return fill;
             }
-            set 
+            set
             {
                 fill = value;
                 RectangleSwatch.Fill = fill;
 
-                if(ToolTipEnabled)
+                if (ToolTipEnabled)
                 {
                     ToolTip = Fill.ToString();
                 }
-            } 
+                
+                FillChanged?.Invoke(this, new SwatchBrushEventArgs(Fill));
+            }
         }
 
         private Brush stroke = Brushes.Black;
-        public Brush Stroke 
-        { 
-            get 
+        public Brush Stroke
+        {
+            get
             {
                 return stroke;
-            } 
-            set 
+            }
+            set
             {
                 stroke = value;
                 RectangleSwatch.Stroke = stroke;
-            } 
+            }
         }
+        
         private double strokeThickness = 0;
         public double StrokeThickness
         {
-            get 
+            get
             {
                 return strokeThickness;
             }
@@ -67,14 +82,16 @@ namespace Monkeyshines
                 RectangleSwatch.StrokeThickness = strokeThickness;
             }
         }
-        public string HexCode 
-        { 
-            get 
+        public string HexCode
+        {
+            get
             {
                 return Fill.ToString();
-            } 
+            }
         }
         public bool ToolTipEnabled { get; set; } = true;
+        public event MouseButtonEventHandler Selected;
+        public event SwatchBrushEventHandler FillChanged;
         public Swatch()
         {
             InitializeComponent();
@@ -85,7 +102,7 @@ namespace Monkeyshines
         public Swatch(SolidColorBrush brush)
         {
             InitializeComponent();
-            
+
             Fill = brush;
         }
         public Swatch(SolidColorBrush brush, Brush stroke) : this(brush)
@@ -93,6 +110,32 @@ namespace Monkeyshines
             Stroke = stroke;
 
             if (StrokeThickness == 0) StrokeThickness = 1;
-        }        
+        }
+
+        public override string ToString()
+        {
+            return Fill.ToString();
+        }
+       
+        private void RouteMouseEvent(object sender, MouseButtonEventArgs e)
+        {
+            Selected?.Invoke(this, e);
+        }
+
+        public object Clone()
+        {
+            Swatch clone = new Swatch
+                ( (SolidColorBrush) this.Fill
+                , this.Stroke
+                )
+            { Width = this.Width
+            , Height = this.Height
+            , Margin = this.Margin
+            };
+
+            clone.Selected = this.Selected;
+
+            return clone;
+        }
     }
 }

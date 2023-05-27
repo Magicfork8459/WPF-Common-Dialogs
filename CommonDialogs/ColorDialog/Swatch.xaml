@@ -6,8 +6,12 @@
              xmlns:local="clr-namespace:Monkeyshines"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    
-    
-        <Rectangle Name="RectangleSwatch"
-        />
+
+
+    <Rectangle Name="RectangleSwatch"
+        MouseDown="RouteMouseEvent" MouseUp="RouteMouseEvent">
+        <!--<Rectangle.ContextMenu>
+            <ContextMenu/>
+        </Rectangle.ContextMenu>-->
+    </Rectangle>
 </UserControl>

@@ -11,18 +11,16 @@ namespace Monkeyshines
 {
     internal class ValidationRuleHexCode : ValidationRule
     {
-        public int CharacterCount { get; set; } = 6;
-        private Regex HexCodeRegex { get; set; }
-        //static Regex HexCodeRegex = new Regex(@"^#?([A-F|0-9]{8})$");
+        private Regex hexCodeRegex;
 
-        public ValidationRuleHexCode(): base()
+        public ValidationRuleHexCode(int characterLimit): base()
         {
-            HexCodeRegex = new Regex(@$"^?([A-F|0-9]{{{ CharacterCount }}})$");
+            hexCodeRegex = new Regex(@$"^([A-F|0-9]{{{ characterLimit }}})$");
         }
 
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
-            if(HexCodeRegex.IsMatch((string)value))
+            if(hexCodeRegex.IsMatch((string)value))
             {
                 return ValidationResult.ValidResult;
             }
