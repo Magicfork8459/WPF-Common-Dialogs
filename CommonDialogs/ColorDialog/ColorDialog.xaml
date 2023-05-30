@@ -58,10 +58,10 @@
             </Grid>
         </Grid>
         <DockPanel Grid.Column="0" Grid.Row="1">
-            <GroupBox Name="GroupBoxShadeSelection" Header="Luminosity">
+            <GroupBox Name="GroupBoxShadeSelection" Header="Brightness">
                 <DockPanel FlowDirection="LeftToRight">
-                    <TextBox Name="TextBoxLuminosity" DockPanel.Dock="Right" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MinWidth="35" Margin="5" Height="{Binding ActualHeight, ElementName=TextBoxHexCode}" MaxLength="3"/>
-                    <Slider Name="ColorSliderLuminosity" Style="{StaticResource ColorSlider}" Maximum="100"/>
+                    <TextBox Name="TextBoxBrightness" DockPanel.Dock="Right" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MinWidth="35" Margin="5" Height="{Binding ActualHeight, ElementName=TextBoxHexCode}" MaxLength="3"/>
+                    <Slider Name="ColorSliderBrightness" Style="{StaticResource ColorSlider}" Maximum="100" ValueChanged="ColorSliderBrightness_ValueChanged" SmallChange="1"/>
                 </DockPanel>
             </GroupBox>
         </DockPanel>
