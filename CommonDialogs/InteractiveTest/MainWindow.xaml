@@ -5,28 +5,28 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:InteractiveTest"
         mc:Ignorable="d"
-        Title="Dialog Tester" Height="450" Width="800">
+        Title="Dialog Tester" Height="250" Width="300">
     <Grid>
         <TabControl>
             <TabItem Header="Color">
-                <!--<Monkeyshines:Swatch />-->
                 <StackPanel>
-                    <GroupBox Header="Colors">
+                    <GroupBox Header="Colors" Margin="5">
                         <StackPanel>
                             <GroupBox Header="Current" MinHeight="54">
                                 <DockPanel>
                                     <Monkeyshines:Swatch Name="SwatchCurrent" Height="24" Width="24"/>
-                                    <TextBox Margin="5" MaxLength="8" MinWidth="64"/>
-                                    <Button Content="Apply" Margin="5"/>
+                                    <TextBox Name="TextBoxCode" Margin="5" MaxLength="8" MinWidth="64"/>
+                                    <Button Name="ButtonApply" Content="Apply" Margin="5" MinWidth="64" MinHeight="24" Click="ButtonApply_Click"/>
                                 </DockPanel>
                             </GroupBox>
                             <GroupBox Header="Cached" MinHeight="54">
-                                <StackPanel Name="StackPanelSwatchesCached"/>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                    <StackPanel Name="StackPanelSwatchesCached" Orientation="Horizontal"/>
+                                </ScrollViewer>
                             </GroupBox>
                         </StackPanel>
-
                     </GroupBox>
-                    <Button Name="ButtonOpenColorDialog" Click="ButtonOpenColorDialog_Click">Open Dialog</Button>
+                    <Button Name="ButtonOpenColorDialog" Click="ButtonOpenColorDialog_Click" Margin="5" MinHeight="24">Open Dialog</Button>
                 </StackPanel>
             </TabItem>
         </TabControl>

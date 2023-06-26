@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Monkeyshines"
         mc:Ignorable="d"
-        Title="Color Dialog" Height="450" Width="800">
+        Title="Color Dialog" Height="250" Width="650">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -27,8 +27,6 @@
         <Grid Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <!--<ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>-->
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -44,8 +42,8 @@
                         <DockPanel>
                             <local:Swatch x:Name="SwatchCurrent" Width="24" Height="24" StrokeThickness="1" Margin="5" />
                             <Label Content="#" VerticalContentAlignment="Center"/>
-                            <TextBox Name="TextBoxAlphaHexCode" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="2" ToolTip="2 digit alpha code (FF if empty)" MinWidth="32"/>
-                            <TextBox Name="TextBoxHexCode" DockPanel.Dock="Right" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="6" ToolTip="6 digit color code">
+                            <TextBox Name="TextBoxAlphaHexCode" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="2" ToolTip="2 digit alpha code (FF if empty)" MinWidth="32" TextChanged="TextBoxCode_TextChanged"/>
+                            <TextBox Name="TextBoxHexCode" DockPanel.Dock="Right" Margin="5" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLength="6" ToolTip="6 digit color code" TextChanged="TextBoxCode_TextChanged">
                             </TextBox>
                         </DockPanel>
                     </StackPanel>
@@ -58,15 +56,13 @@
             </Grid>
         </Grid>
         <DockPanel Grid.Column="0" Grid.Row="1">
-            <!--TODO
-            <GroupBox Name="GroupBoxShadeSelection" Header="Color Space">
+
+            <GroupBox Name="GroupBoxShadeSelection" Header="Color Space" IsEnabled="False">
                 <DockPanel FlowDirection="LeftToRight" VerticalAlignment="Center">
-                    <RadioButton Content="RGB"/>
-                    <RadioButton Content="HSV"/>
-                    <RadioButton Content="CMYK"/>
+                    <RadioButton Content="RGB" Margin="5"/>
+                    <RadioButton Content="HSB" Margin="5"/>
                 </DockPanel>
             </GroupBox>
-            -->
         </DockPanel>
         <GroupBox Grid.Row="2" Grid.Column="0" Header="Alpha">
             <DockPanel FlowDirection="LeftToRight">
@@ -92,5 +88,9 @@
                 <Slider Name="ColorSliderBlue" Style="{StaticResource ColorSlider}" Maximum="255" ValueChanged="ColorSliderARGB_ValueChanged"/>
             </DockPanel>
         </GroupBox>
+        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" FlowDirection="RightToLeft">
+            <Button Name="ButtonCancel" Width="64" Height="24" Margin="5" Click="ButtonCancel_Click">Cancel</Button>
+            <Button Name="ButtonOk" Width="64" Height="24" Margin="5" Click="ButtonOk_Click">Ok</Button>
+        </StackPanel>
     </Grid>
 </Window>
