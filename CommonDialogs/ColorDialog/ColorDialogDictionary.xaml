@@ -16,6 +16,12 @@
     </Style>
     <Color x:Key="ControlBeginColor">Black</Color>
     <Color x:Key="ControlEndColor">Red</Color>
+    <Color x:Key="HSBStop0">Red</Color>
+    <Color x:Key="HSBStop15">Yellow</Color>
+    <Color x:Key="HSBStop30">Green</Color>
+    <Color x:Key="HSBStop45">Cyan</Color>
+    <Color x:Key="HSBStop60">Blue</Color>
+    <Color x:Key="HSBStop75">Magenta</Color>
     <!-- Thumb -->
     <Style x:Key="ColorSliderThumbStyle" TargetType="{x:Type Thumb}">
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -65,6 +71,38 @@
             </Track>
         </Grid>
     </ControlTemplate>
+    <ControlTemplate x:Key="HorizontalHueSlider" TargetType="{x:Type Slider}">
+        <Grid>
+            <Border x:Name="TrackBackground" Height="16" CornerRadius="8">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <LinearGradientBrush.GradientStops>
+                            <GradientStopCollection>
+                                <GradientStop Color="{DynamicResource HSBStop0}" Offset="0.0"/>
+                                <GradientStop Color="{DynamicResource HSBStop15}" Offset="0.15"/>
+                                <GradientStop Color="{DynamicResource HSBStop30}" Offset="0.3"/>
+                                <GradientStop Color="{DynamicResource HSBStop45}" Offset="0.45"/>
+                                <GradientStop Color="{DynamicResource HSBStop60}" Offset="0.6"/>
+                                <GradientStop Color="{DynamicResource HSBStop75}" Offset="0.75"/>
+                                <GradientStop Color="{DynamicResource HSBStop0}" Offset="1.0"/>
+                            </GradientStopCollection>
+                        </LinearGradientBrush.GradientStops>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+            <Track x:Name="PART_Track">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SliderButtonStyle}" Command="Slider.DecreaseLarge"/>
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource ColorSliderThumbStyle}"/>
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SliderButtonStyle}" Command="Slider.IncreaseLarge"/>
+                </Track.IncreaseRepeatButton>
+            </Track>
+        </Grid>
+    </ControlTemplate>
     <!-- Slider Base -->
     <Style x:Key="ColorSlider" TargetType="{x:Type Slider}">
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -75,6 +113,17 @@
                 <Setter Property="Template" Value="{StaticResource HorizontalColorSlider}"/>
             </Trigger>
             
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="HueSlider" TargetType="{x:Type Slider}">
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="TickFrequency" Value="1"/>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Template" Value="{StaticResource HorizontalHueSlider}"/>
+            </Trigger>
+
         </Style.Triggers>
     </Style>
 </ResourceDictionary>

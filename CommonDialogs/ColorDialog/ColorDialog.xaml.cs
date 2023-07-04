@@ -20,14 +20,24 @@ namespace Monkeyshines
 
     public partial class ColorDialog : Window
     {
+        private enum ColorSpace
+        {
+            //! Red, Green, Blue
+            RGB,
+            //! Hue, Saturation, Brightness/Value
+            HSB,
+            //! Things not specific to any one color space
+            NONE
+        }
+
         private static ValidationRuleHexCode validateHexCode = new ValidationRuleHexCode(6);
         private static ValidationRuleHexCode validateAlphaCode = new ValidationRuleHexCode(2);
-        
+        private Dictionary<ColorSpace, List<ColorChangedEventHandler>> colorHandlers;
         private List<MenuItem> staticSwatchMenuItems = new();
         private List<MenuItem> dynamicSwatchMenuItems = new();
         private Swatch? selectedSwatch = null;
         
-        //private Dictionary<object, RoutedPropertyChangedEventHandler<double>> sliderValueHandlers;
+        
 
         protected ObservableCollection<Swatch> CachedSwatches = new();
         public List<Color> CachedColors { get { return SwatchesToColors(); } }
@@ -38,19 +48,18 @@ namespace Monkeyshines
 
         public ColorDialog(Color current)
         {
-            InitializeComponent();
-
-            currentColor = current;
-            List<Swatch> swatches = new();            
-            Dictionary<object, ColorChangedEventHandler> colorHandlers = new()
+            colorHandlers = new();
             {
-                { ColorSliderAlpha, ColorChanged_UpdateAlpha },
-                { ColorSliderRed, ColorChanged_UpdateRed },
-                { ColorSliderGreen, ColorChanged_UpdateGreen },
-                { ColorSliderBlue, ColorChanged_UpdateBlue },
-                { SwatchCurrent, ColorChanged_UpdateSwatch },
-                { this, ColorChanged_UpdateHexTextBoxes }
-            };
+                colorHandlers.Add(ColorSpace.RGB, new() { ColorChanged_UpdateRed, ColorChanged_UpdateGreen, ColorChanged_UpdateBlue });
+                colorHandlers.Add(ColorSpace.NONE, new() { ColorChanged_UpdateAlpha, ColorChanged_UpdateSwatch, ColorChanged_UpdateHexTextBoxes });
+            }
+
+            InitializeComponent();
+            //TODO by default, check this but allow for HSB at construction
+            RadioButtonRGB.IsChecked = true;
+            currentColor = current;
+            List<Swatch> swatches = new();
+            
 
             CachedSwatches.CollectionChanged    += CachedSwatches_CollectionChanged;
 
@@ -95,9 +104,9 @@ namespace Monkeyshines
                 swatch.Selected += Swatch_Selected;
             }
             
-            foreach(var handler in colorHandlers)
+            foreach(var handler in colorHandlers[ColorSpace.NONE])
             {
-                ColorChanged += handler.Value;
+                ColorChanged += handler;
             }
 
             ColorChanged?.Invoke(this, new ColorChangedEventArgs() { OldColor = null, NewColor = current });
@@ -322,6 +331,7 @@ namespace Monkeyshines
                     
                 byte converted = Convert.ToByte(updatedText);
 
+                //TODO Need to get the maximum value of the associated slider to this textbox
                 e.Handled = converted > 255 || converted < 0;
             }
             catch (Exception exception)
@@ -388,7 +398,7 @@ namespace Monkeyshines
         {
             SwatchCurrent.Fill = new SolidColorBrush(args.NewColor);
         }
-
+        //TODO problem is with alpha handler...
         private void ColorChanged_UpdateAlpha(object sender, ColorChangedEventArgs args)
         {
             Color color = args.NewColor;
@@ -516,6 +526,151 @@ namespace Monkeyshines
         {
             DialogResult = false;
             Close();
+        }
+
+        private void RadioButtonRGB_Checked(object sender, RoutedEventArgs e)
+        {
+            //foreach (var handler in colorHandlers[ColorSpace.HSB])
+            //{
+            //    ColorChanged -= handler;
+            //}
+
+            foreach (var handler in colorHandlers[ColorSpace.RGB])
+            {
+                ColorChanged += handler;
+            }
+
+            TextBoxRed.TextChanged += TextBoxARGB_TextChanged;
+            TextBoxGreen.TextChanged += TextBoxARGB_TextChanged;
+            TextBoxBlue.TextChanged += TextBoxARGB_TextChanged;
+
+            //! Top -> Red
+            ColorSliderRed.ValueChanged += ColorSliderARGB_ValueChanged;
+            ColorSliderRed.Style = (Style) Resources["ColorSlider"];
+            ColorSliderRed.Maximum = 255;
+
+            //! Middle -> Green
+            ColorSliderGreen.ValueChanged += ColorSliderARGB_ValueChanged;
+            ColorSliderGreen.Style = (Style)Resources["ColorSlider"];
+            ColorSliderGreen.Maximum = 255;
+
+            //! Bottom -> Blue
+            ColorSliderBlue.ValueChanged += ColorSliderARGB_ValueChanged;
+            ColorSliderBlue.Style = (Style)Resources["ColorSlider"];
+            ColorSliderBlue.Maximum = 255;
+        }
+
+        private Color HSBToColor()
+        {
+            double c = ColorSliderBlue.Value * ColorSliderGreen.Value;            
+            double x = c * Math.Abs((ColorSliderRed.Value / 60) % 2 - 1);            
+            double m = ColorSliderBlue.Value - c;
+            byte rPrime, gPrime, bPrime;
+            {
+                rPrime = gPrime = bPrime = 0;
+            }
+            Color color = new Color()
+            { 
+                A = (byte) ColorSliderAlpha.Value                
+            };
+
+            switch((byte) ColorSliderRed.Value)
+            {
+                case byte n when (n >= 0 && n < 60):
+                    rPrime = (byte) c;
+                    gPrime = (byte) x;
+                    bPrime = 0;
+                    break;
+            }
+
+            color.R = rPrime;
+            color.G = gPrime;
+            color.B = bPrime;
+            return color;
+        }
+
+        private void ColorToHSB(in Color color, out double hue, out double saturation, out double brightness)
+        {
+            byte rPrime = (byte)(color.R / 255);
+            byte gPrime = (byte)(color.G / 255);
+            byte bPrime = (byte)(color.B / 255);
+            byte max = Math.Max(rPrime, Math.Max(gPrime, bPrime));
+            byte min = Math.Min(rPrime, Math.Min(gPrime, bPrime));
+            byte delta = (byte)(max - min);
+
+            //! Hue
+            if(delta.Equals(0))
+            {
+                hue = 0;
+            }
+            else if(max.Equals(rPrime))
+            {
+                hue = (60 * (((gPrime - bPrime) / delta) % 6));
+            }
+            else if(max.Equals(gPrime))
+            {
+                hue = (((bPrime - rPrime) / delta) + 2);
+            }
+            else
+            { //! Must be bPrime
+                hue = (((rPrime - gPrime) / delta) + 4);
+            }
+
+            //! Saturation
+            switch(max)
+            {
+                case 0: saturation = 0; break;
+                default:
+                    saturation = (delta / max);
+                    break;
+            }
+
+            //! Brightness
+            brightness = max;
+        }
+
+
+        private void RadioButtonHSB_Checked(object sender, RoutedEventArgs e)
+        {
+            double hue, saturation, brightness;
+            {
+                ColorToHSB(currentColor, out hue, out saturation, out brightness);
+            }
+
+            foreach (var handler in colorHandlers[ColorSpace.RGB])
+            {
+                ColorChanged -= handler;
+            }
+
+            ColorSliderRed.ValueChanged -= ColorSliderARGB_ValueChanged;
+            ColorSliderGreen.ValueChanged -= ColorSliderARGB_ValueChanged;
+            ColorSliderBlue.ValueChanged -= ColorSliderARGB_ValueChanged;
+            TextBoxRed.TextChanged -= TextBoxARGB_TextChanged;
+            TextBoxGreen.TextChanged -= TextBoxARGB_TextChanged;
+            TextBoxBlue.TextChanged -= TextBoxARGB_TextChanged;
+
+            //! Top -> Hue
+            ColorSliderRed.Style = (Style) Resources["HueSlider"];
+            ColorSliderRed.Maximum = 360;
+            ColorSliderRed.Value = hue;
+
+            // determine HSB from currentColor
+
+            //ColorSliderRed.RemoveHandler(Slider.ValueChangedEvent, ColorSliderARGB_ValueChanged);
+            //ColorSliderGreen.RemoveHandler(Slider.ValueChangedEvent, ColorSliderARGB_ValueChanged);
+            //ColorSliderBlue.RemoveHandler(Slider.ValueChangedEvent, ColorSliderARGB_ValueChanged);
+
+            //! Middle -> Saturation
+            //! Max will be less than RGB, so set the value before setting the new max
+            ColorSliderGreen.Value = saturation;
+            ColorSliderGreen.Maximum = 100;
+
+            //! Bottom -> Brightness
+            ColorSliderBlue.Value = brightness;
+            ColorSliderBlue.Maximum = 100;
+
+            Color c = HSBToColor();
+            currentColor = c;
         }
     }
 }
