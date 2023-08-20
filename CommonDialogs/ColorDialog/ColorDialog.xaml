@@ -70,19 +70,19 @@
                 <Slider Name="ColorSliderAlpha" Style="{StaticResource ColorSlider}" Maximum="255" ValueChanged="ColorSliderARGB_ValueChanged"/>
             </DockPanel>
         </GroupBox>
-        <GroupBox Grid.Row="0" Grid.Column="1" Header="Red">
+        <GroupBox Name="GroupBoxTop" Grid.Row="0" Grid.Column="1" Header="Red">
             <DockPanel FlowDirection="LeftToRight">
                 <TextBox Name="TextBoxRed" DockPanel.Dock="Right" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MinWidth="35" Margin="5" Height="{Binding ActualHeight, ElementName=TextBoxHexCode}" PreviewTextInput="ColorTextBox_PreviewTextInput" MaxLength="3"/>
                 <Slider Name="ColorSliderRed" Style="{StaticResource ColorSlider}"/>
             </DockPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" Grid.Column="1" Header="Green">
+        <GroupBox Name="GroupBoxMiddle" Grid.Row="1" Grid.Column="1" Header="Green">
             <DockPanel FlowDirection="LeftToRight">
                 <TextBox Name="TextBoxGreen" DockPanel.Dock="Right" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MinWidth="35" Margin="5" Height="{Binding ActualHeight, ElementName=TextBoxHexCode}" PreviewTextInput="ColorTextBox_PreviewTextInput" MaxLength="3"/>
                 <Slider Name="ColorSliderGreen" Style="{StaticResource ColorSlider}"/>
             </DockPanel>
         </GroupBox>
-        <GroupBox Grid.Row="2" Grid.Column="1" Header="Blue">
+        <GroupBox Name="GroupBoxBottom" Grid.Row="2" Grid.Column="1" Header="Blue">
             <DockPanel FlowDirection="LeftToRight">
                 <TextBox Name="TextBoxBlue" DockPanel.Dock="Right" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" MinWidth="35" Margin="5" Height="{Binding ActualHeight, ElementName=TextBoxHexCode}" PreviewTextInput="ColorTextBox_PreviewTextInput" MaxLength="3"/>
                 <Slider Name="ColorSliderBlue" Style="{StaticResource ColorSlider}"/>

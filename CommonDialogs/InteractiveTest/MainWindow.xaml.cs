@@ -35,9 +35,9 @@ namespace InteractiveTest
 
                 if(result is not null && result is true)
                 {
-                    SwatchCurrent.Fill = new SolidColorBrush(dialog.CurrentColor);
+                    //TODO SwatchCurrent.Fill = new SolidColorBrush(dialog.CurrentColor);
 
-                    foreach(Color color in dialog.CachedColors)
+                    foreach(Monkeyshines.Color color in dialog.CachedColors)
                     {
                         StackPanelSwatchesCached.Children.Add(new Swatch() { Fill = new SolidColorBrush(color), Height = 24, Width = 24, Margin = new Thickness(5) });
                     }
@@ -47,7 +47,8 @@ namespace InteractiveTest
 
         private void ButtonApply_Click(object sender, RoutedEventArgs e)
         {
-            SwatchCurrent.Fill = new SolidColorBrush(ColorDialog.ColorCodeToColor(TextBoxCode.Text));
+            Monkeyshines.Color color = new Monkeyshines.Color(TextBoxCode.Text);
+            SwatchCurrent.Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue));
         }
     }
 }
