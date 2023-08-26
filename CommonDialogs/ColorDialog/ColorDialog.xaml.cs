@@ -9,6 +9,9 @@ using System.Windows.Media;
 using System.Collections.Specialized;
 
 //TODO add support for selecting multiple cached swatches and then mixing them together into one color to set as the current color
+//TODO Constructor to set HSB as the active mode on load
+//TODO Constructor that takes in a Brush for Current and collection of Brushes for Cached
+
 using WinColor = System.Windows.Media.Color;
 
 namespace Monkeyshines
@@ -38,12 +41,13 @@ namespace Monkeyshines
         protected ObservableCollection<Swatch> CachedSwatches = new();
 
         public List<Color> CachedColors { get { return SwatchesToColors(); } }
+
+        public Color Color { get { return currentColor.Color; } }
         
         public ColorDialog(Color current)
         {
             InitializeComponent();
-            currentColor = new(current);
-            //TODO by default, check this but allow for HSB at construction
+            currentColor = new(current);            
             RadioButtonRGB.IsChecked = true;
             List<Swatch> swatches = new();
             
@@ -100,11 +104,9 @@ namespace Monkeyshines
             observerHSB.ColorChanged += ColorChanged_UpdateAlpha;
             observerHSB.ColorChanged += ColorChanged_UpdateHSB;
 
-            
+            currentColor.UpdateColor(current);
         }    
-
-        //! Constructor that takes in a Brush for Current and collection of Brushes for Cached
-
+        
         public ColorDialog()
             : this(Brushes.White.Color)
         {
@@ -151,8 +153,6 @@ namespace Monkeyshines
             {
                 Color newColor = new Color(selectedSwatch.ToString());
 
-                //ColorChanged?.Invoke(this, new ColorChangedEventArgs() { OldColor = currentColor, NewColor = newColor });
-                //currentColor = newColor;
                 currentColor.UpdateColor(newColor);
             }            
         }
@@ -234,9 +234,6 @@ namespace Monkeyshines
                         switch(mouseEvent.ChangedButton)
                         {
                             case MouseButton.Right:
-                                //TODO open up a menu
-                                // Current / Shade Swatch (Cache, Copy to Clipboard)
-                                // Cached Swatch (Delete, Copy to Clipboard)
                                 ContextMenu menu = new() { PlacementTarget = asSwatch };
 
                                 if (CachedSwatches.Contains(asSwatch))
@@ -366,6 +363,8 @@ namespace Monkeyshines
         private void ColorChanged_UpdateHSB(object sender, ColorChangedEventArgs args)
         {
             Color color = args.NewColor;
+            Color colorMaxSaturation = new Color(color.Hue, 1, color.Brightness);
+            Color colorMaxBrightness = new Color(color.Hue, color.Saturation, 1);
             byte saturationAsByte = Convert.ToByte(color.Saturation * 100);
             byte brightnessAsByte = Convert.ToByte(color.Brightness * 100);
 
@@ -383,12 +382,12 @@ namespace Monkeyshines
             ColorSliderGreen.Value = saturationAsByte;
             TextBoxGreen.Text = saturationAsByte.ToString();
             ColorSliderGreen.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, Convert.ToByte(255 * color.Brightness), Convert.ToByte(255 * color.Brightness), Convert.ToByte(255 * color.Brightness));
-            ColorSliderGreen.Resources["ControlEndColor"] = WinColor.FromArgb(color.Alpha, Convert.ToByte(color.Red * color.Saturation), Convert.ToByte(color.Green * color.Saturation), Convert.ToByte(color.Blue * color.Saturation));
+            ColorSliderGreen.Resources["ControlEndColor"] = WinColor.FromArgb(colorMaxSaturation.Alpha, colorMaxSaturation.Red, colorMaxSaturation.Green, colorMaxSaturation.Blue);
 
             ColorSliderBlue.Value = brightnessAsByte;
             TextBoxBlue.Text = brightnessAsByte.ToString();
             ColorSliderBlue.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, 0, 0, 0);
-            ColorSliderBlue.Resources["ControlEndColor"] = WinColor.FromArgb(color.Alpha, Convert.ToByte(255 * color.Saturation), Convert.ToByte(255 * color.Saturation), Convert.ToByte(255 * color.Saturation));
+            ColorSliderBlue.Resources["ControlEndColor"] = WinColor.FromArgb(colorMaxBrightness.Alpha, colorMaxBrightness.Red, colorMaxBrightness.Green, colorMaxBrightness.Blue);
 
             ColorSliderRed.ValueChanged += ColorSliderHSB_ValueChanged;
             TextBoxRed.TextChanged += TextBoxHSB_TextChanged;
@@ -565,8 +564,6 @@ namespace Monkeyshines
 
             if(asTextBox is not null)
             {
-                //convert the text to #
-                //update corresponding slider by that number
                 string text = asTextBox.Text;
                 short? textAsShort = null;
 

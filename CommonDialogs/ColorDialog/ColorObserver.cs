@@ -23,7 +23,7 @@ namespace Monkeyshines
 
         public void OnNext(Color value)
         {
-            ColorChanged?.Invoke(this, new ColorChangedEventArgs() { OldColor = Color, NewColor = value });
+            ColorChanged?.Invoke(this, new ColorChangedEventArgs() { NewColor = value });
             Color = value;
         }
     }

@@ -35,7 +35,7 @@ namespace InteractiveTest
 
                 if(result is not null && result is true)
                 {
-                    //TODO SwatchCurrent.Fill = new SolidColorBrush(dialog.CurrentColor);
+                    SwatchCurrent.Fill = new SolidColorBrush(dialog.Color);
 
                     foreach(Monkeyshines.Color color in dialog.CachedColors)
                     {

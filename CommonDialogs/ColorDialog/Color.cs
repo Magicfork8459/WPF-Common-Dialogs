@@ -7,8 +7,7 @@ namespace Monkeyshines
 {
     public class ColorChangedEventArgs : EventArgs
     {
-        public Color NewColor { get; set; }
-        public Color? OldColor { get; set; }
+        public Color NewColor { get; set; } = new();
     }
 
     public delegate void ColorChangedEventHandler(object sender, ColorChangedEventArgs args);
@@ -17,7 +16,6 @@ namespace Monkeyshines
     public record struct TupleHSB(ushort hue, double saturation, double brightness);
     public class Color
     {
-        //TODO When one of these is set, adjust the others appropriately
         private byte red = 255;        
         private byte green = 255;
         private byte blue = 255;
@@ -100,8 +98,6 @@ namespace Monkeyshines
             }
         }
 
-        //public ColorChangedEventHandler? ColorChanged;
-
         public Color()
         {
 
@@ -118,15 +114,14 @@ namespace Monkeyshines
         }
 
         public Color(byte alpha, byte red, byte green, byte blue)
+            : this(red, green, blue)
         {
-            Alpha = alpha;
-            Red = red;
-            Green = green;
-            Blue = blue;
+            Alpha = alpha;            
         }
 
         public Color(byte red, byte green, byte blue)
         {
+            Alpha = 255;
             this.red = red;
             this.green = green;
             this.blue = blue;
@@ -140,6 +135,7 @@ namespace Monkeyshines
 
         public Color(ushort hue, double saturation, double brightness)
         {
+            Alpha = 255;
             this.hue = hue;
             this.saturation = saturation;
             this.brightness = brightness;
