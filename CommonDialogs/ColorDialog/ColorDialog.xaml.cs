@@ -2,54 +2,56 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Collections.Specialized;
 
-//BUG Allowed me to put any alphanumeric character into TextBoxes
+//TODO add support for selecting multiple cached swatches and then mixing them together into one color to set as the current color
+//TODO Constructor to set HSB as the active mode on load
+//TODO Constructor that takes in a Brush for Current and collection of Brushes for Cached
+
+using WinColor = System.Windows.Media.Color;
 
 namespace Monkeyshines
 {
-    internal class ColorChangedEventArgs : EventArgs
-    {
-        public Color NewColor { get; set; }
-        public Color OldColor { get; set; }
-    }
-
-    internal delegate void ColorChangedEventHandler(object sender, ColorChangedEventArgs args);
-
     public partial class ColorDialog : Window
     {
+        private enum ColorSpace
+        {
+            //! Red, Green, Blue
+            RGB,
+            //! Hue, Saturation, Brightness/Value
+            HSB,
+            //! Things not specific to any one color space
+            NONE
+        }
+
+        private IDisposable? unsubscriber;
+        private ObservableColor currentColor;
         private static ValidationRuleHexCode validateHexCode = new ValidationRuleHexCode(6);
         private static ValidationRuleHexCode validateAlphaCode = new ValidationRuleHexCode(2);
-        
+        private ColorObserver observerRGB = new();
+        private ColorObserver observerHSB = new();
         private List<MenuItem> staticSwatchMenuItems = new();
         private List<MenuItem> dynamicSwatchMenuItems = new();
-        private Swatch? selectedSwatch = null;        
+        private Swatch? selectedSwatch = null;       
 
-        public ObservableCollection<Swatch> CachedSwatches = new();
+        protected ObservableCollection<Swatch> CachedSwatches = new();
 
-        Color currentColor;
-        private uint updates = 1;
+        public List<Color> CachedColors { get { return SwatchesToColors(); } }
 
-        //! Constructor that takes in a Brush for Current
-        public ColorDialog(SolidColorBrush current)
+        public Color Color { get { return currentColor.Color; } }
+        
+        public ColorDialog(Color current)
         {
+            InitializeComponent();
+            currentColor = new(current);            
+            RadioButtonRGB.IsChecked = true;
             List<Swatch> swatches = new();
             
-            InitializeComponent();
-            
             CachedSwatches.CollectionChanged    += CachedSwatches_CollectionChanged;
-            TextBoxHexCode.TextChanged          += TextBoxHexCode_TextChanged;
-            TextBoxAlphaHexCode.TextChanged     += TextBoxHexCode_TextChanged;
 
             if (!CachedSwatches.Any())
             {
@@ -72,11 +74,17 @@ namespace Monkeyshines
                 menuItemCache.Click += MenuItemCache_Click;
             }
 
+            MenuItem menuItemSetCurrent = new() { Header = "Set as Current" };
+            {
+                menuItemSetCurrent.Click += MenuItemSetCurrent_Click;
+            }
+
             staticSwatchMenuItems.Add(menuItemCache);
             staticSwatchMenuItems.Add(menuItemCopy);
 
             dynamicSwatchMenuItems.Add(menuItemDeleteSwatch);
             dynamicSwatchMenuItems.Add(menuItemCopy);
+            dynamicSwatchMenuItems.Add(menuItemSetCurrent);
 
             swatches.AddRange(CachedSwatches);
             swatches.Add(SwatchCurrent);
@@ -86,97 +94,35 @@ namespace Monkeyshines
                 swatch.Selected += Swatch_Selected;
             }
 
-            ColorUpdate(this, current.Color);
-        }
+            observerRGB.ColorChanged += ColorChanged_UpdateSwatch;
+            observerRGB.ColorChanged += ColorChanged_UpdateHexTextBoxes;
+            observerRGB.ColorChanged += ColorChanged_UpdateAlpha;
+            observerRGB.ColorChanged += ColorChanged_UpdateRGB;
 
+            observerHSB.ColorChanged += ColorChanged_UpdateSwatch;
+            observerHSB.ColorChanged += ColorChanged_UpdateHexTextBoxes;
+            observerHSB.ColorChanged += ColorChanged_UpdateAlpha;
+            observerHSB.ColorChanged += ColorChanged_UpdateHSB;
 
-        private void SliderValueUpdate(Color color)
-        {
-            byte max = Math.Max(color.R, Math.Max(color.G, color.B));
-            byte brightness = (byte)(max / (ColorSliderRed.Maximum / ColorSliderBrightness.Maximum));
-
-            ColorSliderAlpha.Value = color.A;
-            ColorSliderRed.Value = color.R;
-            ColorSliderGreen.Value = color.G;
-            ColorSliderBlue.Value = color.B;
-           // ColorSliderBrightness.Value = brightness;
-        }
-
-        private void TextBoxTextUpdate(Color color)
-        {
-            byte max = Math.Max(color.R, Math.Max(color.G, color.B));
-            byte brightness = (byte)(max / (ColorSliderRed.Maximum / ColorSliderBrightness.Maximum));
-
-            TextBoxAlpha.Text = color.A.ToString();
-            TextBoxRed.Text = color.R.ToString();
-            TextBoxGreen.Text = color.G.ToString();
-            TextBoxBlue.Text = color.B.ToString();
-            TextBoxBrightness.Text = brightness.ToString();
-        }        
-
-        private void ColorUpdate(object updater, Color color)
-        {
-            TextBox? asTextbox = updater as TextBox;
-            //byte max = Math.Max(color.R, Math.Max(color.G, color.B));
-            //byte brightness = (byte)(max / (ColorSliderRed.Maximum / ColorSliderBrightness.Maximum));
-            string colorCode = color.ToString();
-            string alphaCode = colorCode.Substring(1, 2);
-            string hexColorCode = colorCode.Substring(3);
-
-            TextBoxHexCode.Text = hexColorCode;
-            TextBoxAlphaHexCode.Text = alphaCode;
-
-            ColorSliderAlpha.Resources["ControlBeginColor"] = Color.FromArgb((byte)ColorSliderAlpha.Minimum, color.R, color.G, color.B);
-            ColorSliderAlpha.Resources["ControlEndColor"] = Color.FromArgb((byte)ColorSliderAlpha.Maximum, color.R, color.G, color.B);
-
-            ColorSliderRed.Resources["ControlBeginColor"] = Color.FromArgb(color.A, (byte)ColorSliderRed.Minimum, color.G, color.B);
-            ColorSliderRed.Resources["ControlEndColor"] = Color.FromArgb(color.A, (byte)ColorSliderRed.Maximum, color.G, color.B);
-
-            ColorSliderGreen.Resources["ControlBeginColor"] = Color.FromArgb(color.A, color.R, (byte)ColorSliderGreen.Minimum, color.B);
-            ColorSliderGreen.Resources["ControlEndColor"] = Color.FromArgb(color.A, color.R, (byte)ColorSliderGreen.Maximum, color.B);
-
-            ColorSliderBlue.Resources["ControlBeginColor"] = Color.FromArgb(color.A, color.R, color.G, (byte)ColorSliderBlue.Minimum);
-            ColorSliderBlue.Resources["ControlEndColor"] = Color.FromArgb(color.A, color.R, color.G, (byte)ColorSliderBlue.Maximum);
-
-            //ColorSliderBrightness.Resources["ControlBeginColor"] = Color.FromArgb(color.A, (byte)ColorSliderRed.Minimum, (byte)ColorSliderGreen.Minimum, (byte)ColorSliderBlue.Minimum);
-            //ColorSliderBrightness.Resources["ControlEndColor"] = Color.FromArgb(color.A, (byte)ColorSliderRed.Value, (byte)ColorSliderGreen.Value, (byte)ColorSliderBlue.Value);
-
-            switch (updater)
-            {
-                case TextBox asTextBox:
-                    SliderValueUpdate(color);
-                    break;
-                case Slider asSlider:
-                    //if (ReferenceEquals(asSlider, ColorSliderBrightness))
-                    //{
-                    //    SliderValueUpdate(color);
-                    //    //ColorSliderBrightness.Value = brightness;
-                    //}
-                    //else
-                    //{
-                    //    TextBoxTextUpdate(color);
-                    //}
-                    TextBoxTextUpdate(color);
-                    break;
-                default:
-                    SliderValueUpdate(color);
-                    TextBoxTextUpdate(color);
-                    break;
-            }
-
-            SwatchCurrent.Fill = new SolidColorBrush(color);
-            //Color.
-            //if (!ReferenceEquals(updater, ColorSliderBrightness))
-            { //! The point of the brightness is to get shades of the same color, so we have to maintain that color in memory
-                currentColor = color;
-            }
-        }
-        //! Constructor that takes in a Brush for Current and collection of Brushes for Cached
-
+            currentColor.UpdateColor(current);
+        }    
+        
         public ColorDialog()
-            : this(Brushes.White)
+            : this(Brushes.White.Color)
         {
             
+        }
+
+        private List<Color> SwatchesToColors()
+        {
+            List<Color> colors = new();
+
+            foreach (Swatch swatch in CachedSwatches)
+            {
+                colors.Add(new Color(swatch.ToString()));
+            }
+
+            return colors;
         }
 
         //TODO should be a better way of doing the equals stuff, have to look into IEquatable or whatever for these WPF objects
@@ -199,6 +145,16 @@ namespace Monkeyshines
                     CachedSwatches.Add((Swatch) selectedSwatch.Clone());
                 }
             }
+        }
+
+        private void MenuItemSetCurrent_Click(object sender, RoutedEventArgs args)
+        {
+            if(selectedSwatch is not null)
+            {
+                Color newColor = new Color(selectedSwatch.ToString());
+
+                currentColor.UpdateColor(newColor);
+            }            
         }
 
         private void MenuItemCopy_Click(object sender, RoutedEventArgs e)
@@ -278,9 +234,6 @@ namespace Monkeyshines
                         switch(mouseEvent.ChangedButton)
                         {
                             case MouseButton.Right:
-                                //TODO open up a menu
-                                // Current / Shade Swatch (Cache, Copy to Clipboard)
-                                // Cached Swatch (Delete, Copy to Clipboard)
                                 ContextMenu menu = new() { PlacementTarget = asSwatch };
 
                                 if (CachedSwatches.Contains(asSwatch))
@@ -300,34 +253,6 @@ namespace Monkeyshines
             }
         }
 
-        //TODO updates here reflect to the sliders
-        private void TextBoxHexCode_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            //TODO need to make sure this was user input, if it wasn't we could have problems
-            TextBox asTextBox = (TextBox)sender;
-            bool validUpdate = false;
-            string currentAlpha = string.IsNullOrEmpty(TextBoxAlphaHexCode.Text) ? "FF" : TextBoxAlphaHexCode.Text;
-            string currentColorCode = string.IsNullOrEmpty(TextBoxHexCode.Text) ? "FFFFFF" : TextBoxHexCode.Text;
-            
-            if(ReferenceEquals(asTextBox, TextBoxAlphaHexCode))
-            { // validate the alpha
-                validUpdate = validateAlphaCode.Validate(asTextBox.Text, System.Globalization.CultureInfo.CurrentUICulture).IsValid;
-            } 
-            else if(ReferenceEquals(asTextBox, TextBoxHexCode))
-            { // validate the color
-                validUpdate = validateHexCode.Validate(asTextBox.Text, System.Globalization.CultureInfo.CurrentUICulture).IsValid;
-            }
-            
-            // apply the new update if it was valid
-            if(validUpdate)
-            {
-                string colorString = $"#{ currentAlpha }{ currentColorCode }";
-                //! catch the FormatException?
-                SwatchCurrent.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorString));
-                SwatchCurrent.UpdateLayout();
-            }
-        }
-
         private void CachedSwatches_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs args)
         {
             switch(args.Action)
@@ -337,7 +262,14 @@ namespace Monkeyshines
                     {
                         foreach (var item in args.NewItems)
                         {
-                            PanelCachedSwatches.Children.Add((Swatch) item);
+                            Swatch? swatch = item as Swatch;
+
+                            if(swatch is not null)
+                            {
+                                swatch.Stroke = Brushes.Black;
+                                swatch.StrokeThickness = 1;
+                                PanelCachedSwatches.Children.Add(swatch);
+                            }
                         }
                     }
                     break;
@@ -354,49 +286,37 @@ namespace Monkeyshines
                     // Move
                     // Reset
             }
-        }
+        }              
 
-        private void ColorSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> args)
-        {
-            Color modifiedColor = Color.FromArgb((byte) ColorSliderAlpha.Value, (byte) ColorSliderRed.Value, (byte )ColorSliderGreen.Value, (byte) ColorSliderBlue.Value);
-            ColorUpdate(this, modifiedColor);
-        }
-        
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            //TextBox asTextBox = sender as TextBox;
-            //Panel panel = asTextBox.Parent as Panel;
-
-            //if (!asTextBox.Text.Any())
-            //{
-            //    asTextBox.Text = "0";
-            //    //asTextBox.CaretIndex = asTextBox.Text.Length;
-            //    //TODO Only do this if this changed from user input
-            //    asTextBox.SelectAll();
-
-            //}
-
-            //foreach (object child in panel.Children)
-            //{
-            //    if(child is Slider asSlider)
-            //    {
-            //        asSlider.Value = Convert.ToByte(asTextBox.Text);
-            //    }
-            //}
-
-        }
-
-        //XXX Doesn't like when you select and edit, only working on delete and edit
         private void ColorTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             TextBox asTextBox = (TextBox) sender;
             try
             {
-                string w = e.ControlText;
                 string updatedText = asTextBox.Text.Insert(asTextBox.CaretIndex, e.Text);
-                byte converted = Convert.ToByte(updatedText);
 
-                e.Handled = converted > 255 || converted < 0;
+                if(!string.IsNullOrEmpty(asTextBox.SelectedText) && updatedText.Contains(asTextBox.SelectedText))
+                {
+                    updatedText = updatedText.Replace(asTextBox.SelectedText, string.Empty);
+                }
+                    
+                short converted = Convert.ToInt16(updatedText);
+
+                Panel? asPanel = asTextBox.Parent as Panel;
+
+                if(asPanel is not null)
+                {
+                    foreach (var child in asPanel.Children)
+                    {
+                        Slider? asSlider = child as Slider;
+
+                        if (asSlider is not null)
+                        {
+                            e.Handled = converted > asSlider.Maximum || converted < asSlider.Minimum;
+                            break;
+                        }
+                    }
+                }        
             }
             catch (Exception exception)
             {
@@ -407,18 +327,309 @@ namespace Monkeyshines
             }
         }
 
-        private void ColorSliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void ColorChanged_UpdateRGB(object sender, ColorChangedEventArgs args)
         {
-            //double multiplier   = Math.Round((byte) ColorSliderBrightness.Value * 0.01f, 2);
-            //byte modifiedRed    = (byte)(currentColor.R * multiplier);
-            //byte modifiedGreen  = (byte)(currentColor.G * multiplier);
-            //byte modifiedBlue   = (byte)(currentColor.B * multiplier);
-            //Color modifiedColor = Color.FromArgb((byte) ColorSliderAlpha.Value, modifiedRed, modifiedGreen, modifiedBlue);
-            //// Decrease highest RGB values by the percentage of the brightness
-            //ColorUpdate(sender, modifiedColor);
+            Color color = args.NewColor;
 
-            //// Deactivate CurrentColorSetter
-            //// Activate
+            ColorSliderRed.ValueChanged -= ColorSliderARGB_ValueChanged;
+            TextBoxRed.TextChanged -= TextBoxARGB_TextChanged;
+            ColorSliderGreen.ValueChanged -= ColorSliderARGB_ValueChanged;
+            TextBoxGreen.TextChanged -= TextBoxARGB_TextChanged;
+            ColorSliderBlue.ValueChanged -= ColorSliderARGB_ValueChanged;
+            TextBoxBlue.TextChanged -= TextBoxARGB_TextChanged;
+
+            ColorSliderRed.Value = args.NewColor.Red;
+            TextBoxRed.Text = args.NewColor.Red.ToString();
+            ColorSliderGreen.Value = color.Green;
+            TextBoxGreen.Text = color.Green.ToString();
+            ColorSliderBlue.Value = color.Blue;
+            TextBoxBlue.Text = color.Blue.ToString();
+
+            ColorSliderRed.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, (byte)ColorSliderRed.Minimum, color.Green, color.Blue);
+            ColorSliderRed.Resources["ControlEndColor"] = WinColor.FromArgb(color.Alpha, (byte)ColorSliderRed.Maximum, color.Green, color.Blue);
+            ColorSliderGreen.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, color.Red, (byte)ColorSliderGreen.Minimum, color.Blue);
+            ColorSliderGreen.Resources["ControlEndColor"] = WinColor.FromArgb(color.Alpha, color.Red, (byte)ColorSliderGreen.Maximum, color.Blue);
+            ColorSliderBlue.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, color.Red, color.Green, (byte)ColorSliderBlue.Minimum);
+            ColorSliderBlue.Resources["ControlEndColor"] = WinColor.FromArgb(color.Alpha, color.Red, color.Green, (byte)ColorSliderBlue.Maximum);
+
+            ColorSliderRed.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxRed.TextChanged += TextBoxARGB_TextChanged;
+            ColorSliderGreen.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxGreen.TextChanged += TextBoxARGB_TextChanged;
+            ColorSliderBlue.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxBlue.TextChanged += TextBoxARGB_TextChanged;
+        }
+
+        private void ColorChanged_UpdateHSB(object sender, ColorChangedEventArgs args)
+        {
+            Color color = args.NewColor;
+            Color colorMaxSaturation = new Color(color.Hue, 1, color.Brightness);
+            Color colorMaxBrightness = new Color(color.Hue, color.Saturation, 1);
+            byte saturationAsByte = Convert.ToByte(color.Saturation * 100);
+            byte brightnessAsByte = Convert.ToByte(color.Brightness * 100);
+
+            ColorSliderRed.ValueChanged -= ColorSliderHSB_ValueChanged;
+            TextBoxRed.TextChanged -= TextBoxHSB_TextChanged;
+            ColorSliderGreen.ValueChanged -= ColorSliderHSB_ValueChanged;
+            TextBoxGreen.TextChanged -= TextBoxHSB_TextChanged;
+            ColorSliderBlue.ValueChanged -= ColorSliderHSB_ValueChanged;
+            TextBoxBlue.TextChanged -= TextBoxHSB_TextChanged;
+
+            //! In HSB space the hue slider gradient shouldn't change with the adjustment of the color
+            ColorSliderRed.Value = Convert.ToInt16(color.Hue);
+            TextBoxRed.Text = Convert.ToInt16(color.Hue).ToString();
+
+            ColorSliderGreen.Value = saturationAsByte;
+            TextBoxGreen.Text = saturationAsByte.ToString();
+            ColorSliderGreen.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, Convert.ToByte(255 * color.Brightness), Convert.ToByte(255 * color.Brightness), Convert.ToByte(255 * color.Brightness));
+            ColorSliderGreen.Resources["ControlEndColor"] = WinColor.FromArgb(colorMaxSaturation.Alpha, colorMaxSaturation.Red, colorMaxSaturation.Green, colorMaxSaturation.Blue);
+
+            ColorSliderBlue.Value = brightnessAsByte;
+            TextBoxBlue.Text = brightnessAsByte.ToString();
+            ColorSliderBlue.Resources["ControlBeginColor"] = WinColor.FromArgb(color.Alpha, 0, 0, 0);
+            ColorSliderBlue.Resources["ControlEndColor"] = WinColor.FromArgb(colorMaxBrightness.Alpha, colorMaxBrightness.Red, colorMaxBrightness.Green, colorMaxBrightness.Blue);
+
+            ColorSliderRed.ValueChanged += ColorSliderHSB_ValueChanged;
+            TextBoxRed.TextChanged += TextBoxHSB_TextChanged;
+            ColorSliderGreen.ValueChanged += ColorSliderHSB_ValueChanged;
+            TextBoxGreen.TextChanged += TextBoxHSB_TextChanged;
+            ColorSliderBlue.ValueChanged += ColorSliderHSB_ValueChanged;
+            TextBoxBlue.TextChanged += TextBoxHSB_TextChanged;
+        }
+
+        private void ColorChanged_UpdateSwatch(object sender, ColorChangedEventArgs args)
+        {
+            SwatchCurrent.Fill = new SolidColorBrush(args.NewColor);
+        }
+
+        private void ColorChanged_UpdateAlpha(object sender, ColorChangedEventArgs args)
+        {
+            Color color = args.NewColor;
+
+            ColorSliderAlpha.ValueChanged -= ColorSliderARGB_ValueChanged;
+            TextBoxAlpha.TextChanged -= TextBoxARGB_TextChanged;
+
+            ColorSliderAlpha.Value = color.Alpha;
+            TextBoxAlpha.Text = color.Alpha.ToString();
+
+            ColorSliderAlpha.Resources["ControlBeginColor"] = WinColor.FromArgb((byte) ColorSliderAlpha.Minimum, color.Red, color.Green, color.Blue);
+            ColorSliderAlpha.Resources["ControlEndColor"] = WinColor.FromArgb((byte) ColorSliderAlpha.Maximum, color.Red, color.Green, color.Blue);
+                       
+            ColorSliderAlpha.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxAlpha.TextChanged += TextBoxARGB_TextChanged;
+        }
+
+        private void ColorChanged_UpdateHexTextBoxes(object sender, ColorChangedEventArgs args)
+        {
+            Color color = args.NewColor;
+            //! Pop off the front because it'll have '#'
+            string hexCode = color.ToString().Remove(0, 1);
+
+            TextBoxAlphaHexCode.TextChanged -= TextBoxCode_TextChanged;
+            TextBoxHexCode.TextChanged -= TextBoxCode_TextChanged;
+
+            TextBoxAlphaHexCode.Text = hexCode.Substring(0, 2);
+            TextBoxHexCode.Text = hexCode.Substring(2);
+
+            TextBoxAlphaHexCode.TextChanged += TextBoxCode_TextChanged;
+            TextBoxHexCode.TextChanged += TextBoxCode_TextChanged;
+        }
+
+        private void ColorSliderARGB_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> args)
+        {
+            byte newValueAsByte = (byte) args.NewValue;
+            Color newColor = new()
+            {
+                Alpha = ReferenceEquals(sender, ColorSliderAlpha)   ? newValueAsByte : currentColor.Color.Alpha,
+                Red = ReferenceEquals(sender, ColorSliderRed)     ? newValueAsByte : currentColor.Color.Red,
+                Green = ReferenceEquals(sender, ColorSliderGreen)   ? newValueAsByte : currentColor.Color.Green,
+                Blue = ReferenceEquals(sender, ColorSliderBlue)    ? newValueAsByte : currentColor.Color.Blue
+            };
+
+            args.Handled = true;
+            currentColor.UpdateColor(newColor);
+        }
+
+        private void TextBoxARGB_TextChanged(object sender, TextChangedEventArgs args)
+        {
+            TextBox? asTextBox = sender as TextBox;
+
+            if(asTextBox is not null)
+            {
+                string text = asTextBox.Text;
+                byte textAsByte;
+
+                if (string.IsNullOrEmpty(text))
+                {
+                    textAsByte = 0;
+                    asTextBox.Text = "0";
+                    asTextBox.SelectAll();
+                }
+                else 
+                {
+                    textAsByte = Convert.ToByte(text);
+                }
+
+                Color newColor = new()
+                {
+                    Alpha = ReferenceEquals(sender, TextBoxAlpha) ? textAsByte : currentColor.Color.Alpha,
+                    Red = ReferenceEquals(sender, TextBoxRed) ? textAsByte : currentColor.Color.Red,
+                    Green = ReferenceEquals(sender, TextBoxGreen) ? textAsByte : currentColor.Color.Green,
+                    Blue = ReferenceEquals(sender, TextBoxBlue) ? textAsByte : currentColor.Color.Blue
+                };
+
+                args.Handled = true;
+                currentColor.UpdateColor(newColor);
+            }
+        }
+
+        private void TextBoxCode_TextChanged(object sender, TextChangedEventArgs args)
+        {
+            TextBox? asTextBox = sender as TextBox;
+
+            if(asTextBox is not null)
+            {
+                ValidationRuleHexCode validator = ReferenceEquals(asTextBox, TextBoxAlphaHexCode) ? validateAlphaCode : validateHexCode;
+                bool isValid = validator.Validate(asTextBox.Text, System.Globalization.CultureInfo.CurrentCulture).IsValid;
+
+                if(isValid)
+                {
+                    Color newColor = new Color(TextBoxAlphaHexCode.Text + TextBoxHexCode.Text);
+
+                    currentColor.UpdateColor(newColor);
+                }
+            }
+        }
+
+        private void ButtonOk_Click(object sender, RoutedEventArgs e)
+        {
+            //TODO only return true if there's an actual difference between the opening values and the closing values
+            DialogResult = true;
+            Close();
+        }
+
+        private void ButtonCancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        private void RadioButtonRGB_Checked(object sender, RoutedEventArgs e)
+        {
+            GroupBoxTop.Header = "Red";
+            GroupBoxMiddle.Header = "Green";
+            GroupBoxBottom.Header = "Blue";
+            if (unsubscriber is not null) unsubscriber.Dispose();
+
+            ColorSliderRed.ValueChanged -= ColorSliderHSB_ValueChanged;
+            ColorSliderGreen.ValueChanged -= ColorSliderHSB_ValueChanged;
+            ColorSliderBlue.ValueChanged -= ColorSliderHSB_ValueChanged;
+            TextBoxRed.TextChanged -= TextBoxHSB_TextChanged;
+            TextBoxGreen.TextChanged -= TextBoxHSB_TextChanged;
+            TextBoxBlue.TextChanged -= TextBoxHSB_TextChanged;
+
+            //! Top -> Red            
+            ColorSliderRed.Style = (Style) Resources["ColorSlider"];
+            ColorSliderRed.Maximum = 255;
+            ColorSliderRed.Value = currentColor.Color.Red;
+            ColorSliderRed.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxRed.TextChanged += TextBoxARGB_TextChanged;
+
+            //! Middle -> Green
+            ColorSliderGreen.Style = (Style)Resources["ColorSlider"];
+            ColorSliderGreen.Maximum = 255;
+            ColorSliderGreen.Value = currentColor.Color.Green;
+            ColorSliderGreen.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxGreen.TextChanged += TextBoxARGB_TextChanged;
+
+            //! Bottom -> Blue            
+            ColorSliderBlue.Style = (Style)Resources["ColorSlider"];
+            ColorSliderBlue.Maximum = 255;
+            ColorSliderBlue.Value = currentColor.Color.Blue;
+            ColorSliderBlue.ValueChanged += ColorSliderARGB_ValueChanged;
+            TextBoxBlue.TextChanged += TextBoxARGB_TextChanged;
+
+            unsubscriber = currentColor.Subscribe(observerRGB);
+            currentColor.UpdateColor(currentColor.Color);
+        }
+
+        private void ColorSliderHSB_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> args)
+        {
+            currentColor.UpdateColor(new Color((ushort)ColorSliderRed.Value, (double)(ColorSliderGreen.Value / 100), (double)(ColorSliderBlue.Value / 100)));
+        }
+
+        private void TextBoxHSB_TextChanged(object sender, TextChangedEventArgs args)
+        {
+            TextBox? asTextBox = sender as TextBox;
+
+            if(asTextBox is not null)
+            {
+                string text = asTextBox.Text;
+                short? textAsShort = null;
+
+                if(string.IsNullOrEmpty(text))
+                {
+
+                }
+                else
+                {
+                    textAsShort = Convert.ToInt16(text);
+                }
+
+                Panel? asPanel = asTextBox.Parent as Panel;
+
+                if(textAsShort is not null && asPanel is not null)
+                {
+                    foreach(var child in asPanel.Children)
+                    {
+                        Slider? asSlider = child as Slider;
+
+                        if(asSlider is not null)
+                        {
+                            asSlider.Value = (double) textAsShort;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void RadioButtonHSB_Checked(object sender, RoutedEventArgs e)
+        {
+            GroupBoxTop.Header = "Hue";
+            GroupBoxMiddle.Header = "Saturation";
+            GroupBoxBottom.Header = "Brightness";
+            if (unsubscriber is not null) unsubscriber.Dispose();
+
+            ColorSliderRed.ValueChanged -= ColorSliderARGB_ValueChanged;
+            ColorSliderGreen.ValueChanged -= ColorSliderARGB_ValueChanged;
+            ColorSliderBlue.ValueChanged -= ColorSliderARGB_ValueChanged;
+            TextBoxRed.TextChanged -= TextBoxARGB_TextChanged;
+            TextBoxGreen.TextChanged -= TextBoxARGB_TextChanged;
+            TextBoxBlue.TextChanged -= TextBoxARGB_TextChanged;
+
+            //! Top -> Hue
+            ColorSliderRed.Style = (Style) Resources["HueSlider"];
+            ColorSliderRed.Maximum = 360;
+            ColorSliderRed.Value = currentColor.Color.Hue;
+
+            //! Middle -> Saturation
+            ColorSliderGreen.Maximum = 100;
+            ColorSliderGreen.Value = currentColor.Color.Saturation * 100;
+
+            //! Bottom -> Brightness
+            ColorSliderBlue.Maximum = 100;
+            ColorSliderBlue.Value = currentColor.Color.Brightness * 100;
+
+            //! Set the new callbacks
+            ColorSliderRed.ValueChanged += ColorSliderHSB_ValueChanged;
+            ColorSliderGreen.ValueChanged += ColorSliderHSB_ValueChanged;
+            ColorSliderBlue.ValueChanged += ColorSliderHSB_ValueChanged;
+            TextBoxRed.TextChanged += TextBoxHSB_TextChanged;
+            TextBoxGreen.TextChanged += TextBoxHSB_TextChanged;
+            TextBoxBlue.TextChanged += TextBoxHSB_TextChanged;
+
+            unsubscriber = currentColor.Subscribe(observerHSB);
+            currentColor.UpdateColor(currentColor.Color);
         }
     }
 }

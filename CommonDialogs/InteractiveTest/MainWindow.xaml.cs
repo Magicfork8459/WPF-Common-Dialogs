@@ -26,8 +26,29 @@ namespace InteractiveTest
 
         private void ButtonOpenColorDialog_Click(object sender, RoutedEventArgs e)
         {
-            ColorDialog dialog = new ColorDialog();
-            bool? result = dialog.ShowDialog();
+            SolidColorBrush? asSolidColorBrush = SwatchCurrent.Fill as SolidColorBrush;
+
+            if(asSolidColorBrush is not null)
+            {
+                ColorDialog dialog = new ColorDialog(asSolidColorBrush.Color);
+                bool? result = dialog.ShowDialog();
+
+                if(result is not null && result is true)
+                {
+                    SwatchCurrent.Fill = new SolidColorBrush(dialog.Color);
+
+                    foreach(Monkeyshines.Color color in dialog.CachedColors)
+                    {
+                        StackPanelSwatchesCached.Children.Add(new Swatch() { Fill = new SolidColorBrush(color), Height = 24, Width = 24, Margin = new Thickness(5) });
+                    }
+                }
+            }            
+        }
+
+        private void ButtonApply_Click(object sender, RoutedEventArgs e)
+        {
+            Monkeyshines.Color color = new Monkeyshines.Color(TextBoxCode.Text);
+            SwatchCurrent.Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue));
         }
     }
 }
