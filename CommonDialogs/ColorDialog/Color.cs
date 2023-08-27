@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Windows.Media;
 
 using WinColor = System.Windows.Media.Color;
@@ -304,6 +305,22 @@ namespace Monkeyshines
                     saturation,
                     brightness
                 );
+        }
+
+        public static Color Mix(Color[] colors)
+        {
+            int sumRed = 0;
+            int sumGreen = 0;
+            int sumBlue = 0;
+
+            foreach(Color color in colors) 
+            {
+                sumRed += color.Red;
+                sumGreen += color.Green;
+                sumBlue += color.Blue;
+            }
+
+            return new Color((byte) (sumRed / colors.Length), (byte) (sumGreen / colors.Length), (byte) (sumBlue / colors.Length));
         }
     }
 }

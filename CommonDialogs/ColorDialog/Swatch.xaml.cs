@@ -33,7 +33,7 @@ namespace Monkeyshines
     public delegate void SwatchBrushEventHandler(object sender, SwatchBrushEventArgs e);
 
     //! Putting it in the stackpanel broke the rendering
-    public partial class Swatch : UserControl, ICloneable
+    public partial class Swatch : UserControl, ICloneable, IEquatable<Swatch>
     {
         private Brush fill = Brushes.White;
         public Brush Fill {
@@ -136,6 +136,11 @@ namespace Monkeyshines
             clone.Selected = this.Selected;
 
             return clone;
+        }
+
+        public bool Equals(Swatch? other)
+        {
+            return other is not null && ToString().Equals(other.ToString());
         }
     }
 }
