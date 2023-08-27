@@ -8,7 +8,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Collections.Specialized;
 
-//TODO add support for selecting multiple cached swatches and then mixing them together into one color to set as the current color
 //TODO Constructor to set HSB as the active mode on load
 //TODO Constructor that takes in a Brush for Current and collection of Brushes for Cached
 
@@ -28,15 +27,25 @@ namespace Monkeyshines
             NONE
         }
 
+        private enum ContextMenuOptions
+        {
+            CACHE,
+            DELETE,
+            COPY,
+            CURRENT,
+            MIX,
+            NONE
+        }
+
         private IDisposable? unsubscriber;
         private ObservableColor currentColor;
         private static ValidationRuleHexCode validateHexCode = new ValidationRuleHexCode(6);
         private static ValidationRuleHexCode validateAlphaCode = new ValidationRuleHexCode(2);
         private ColorObserver observerRGB = new();
         private ColorObserver observerHSB = new();
-        private List<MenuItem> staticSwatchMenuItems = new();
-        private List<MenuItem> dynamicSwatchMenuItems = new();
-        private Swatch? selectedSwatch = null;       
+        private Dictionary<ContextMenuOptions, MenuItem> contextMenuOptions = new();
+        private List<Swatch> selected = new();
+        private ContextMenu contextMenu = new();
 
         protected ObservableCollection<Swatch> CachedSwatches = new();
 
@@ -79,12 +88,16 @@ namespace Monkeyshines
                 menuItemSetCurrent.Click += MenuItemSetCurrent_Click;
             }
 
-            staticSwatchMenuItems.Add(menuItemCache);
-            staticSwatchMenuItems.Add(menuItemCopy);
+            MenuItem menuItemMix = new() { Header = "Mix to Current" };
+            {
+                menuItemMix.Click += MenuItemMix_Click;
+            }
 
-            dynamicSwatchMenuItems.Add(menuItemDeleteSwatch);
-            dynamicSwatchMenuItems.Add(menuItemCopy);
-            dynamicSwatchMenuItems.Add(menuItemSetCurrent);
+            contextMenuOptions.Add(ContextMenuOptions.CACHE, menuItemCache);
+            contextMenuOptions.Add(ContextMenuOptions.COPY, menuItemCopy);
+            contextMenuOptions.Add(ContextMenuOptions.DELETE, menuItemDeleteSwatch);
+            contextMenuOptions.Add(ContextMenuOptions.CURRENT, menuItemSetCurrent);
+            contextMenuOptions.Add(ContextMenuOptions.MIX, menuItemMix);
 
             swatches.AddRange(CachedSwatches);
             swatches.Add(SwatchCurrent);
@@ -105,8 +118,20 @@ namespace Monkeyshines
             observerHSB.ColorChanged += ColorChanged_UpdateHSB;
 
             currentColor.UpdateColor(current);
-        }    
-        
+        }
+
+        private void MenuItemMix_Click(object sender, RoutedEventArgs e)
+        {
+            List<Color> colors = new();
+
+            foreach(Swatch swatch in selected)
+            {
+                colors.Add(new Color(swatch.ToString()));
+            }
+
+            currentColor.UpdateColor(Color.Mix(colors.ToArray()));
+        }
+
         public ColorDialog()
             : this(Brushes.White.Color)
         {
@@ -125,88 +150,64 @@ namespace Monkeyshines
             return colors;
         }
 
-        //TODO should be a better way of doing the equals stuff, have to look into IEquatable or whatever for these WPF objects
         private void MenuItemCache_Click(object sender, RoutedEventArgs e)
         {
-            if(selectedSwatch is not null)
+            if(!CachedSwatches.Contains(SwatchCurrent)) 
             {
-                bool found = false;
-                foreach(Swatch swatch in CachedSwatches)
-                {
-                    if(swatch.ToString().Equals(selectedSwatch.ToString()))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if(!found)
-                {
-                    CachedSwatches.Add((Swatch) selectedSwatch.Clone());
-                }
+                CachedSwatches.Add((Swatch) SwatchCurrent.Clone());
             }
         }
 
         private void MenuItemSetCurrent_Click(object sender, RoutedEventArgs args)
         {
-            if(selectedSwatch is not null)
+            if(selected.Any())
             {
-                Color newColor = new Color(selectedSwatch.ToString());
-
-                currentColor.UpdateColor(newColor);
-            }            
+                currentColor.UpdateColor(new Color(selected.First().ToString()));
+            }
         }
 
         private void MenuItemCopy_Click(object sender, RoutedEventArgs e)
         {
-            if(selectedSwatch is not null)
+            if(selected.Any())
             {
-                Clipboard.SetText(selectedSwatch.ToString());
+                Clipboard.SetText(selected.First().ToString());
             }
         }
 
         private void MenuItemDeleteSwatch_Click(object sender, RoutedEventArgs e)
         {
-            if(selectedSwatch is not null)
+            foreach(Swatch swatch in selected)
             {
-                if(CachedSwatches.Contains(selectedSwatch))
+                if (CachedSwatches.Contains(swatch))
                 {
-                    CachedSwatches.Remove(selectedSwatch);
+                    CachedSwatches.Remove(swatch);
                 }
             }
         }
 
         private void SelectSwatch(Swatch swatch)
         {
-            Swatch? previousSelection = null;
+            if(selected.Any())
+            {
+                if(!(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)))
+                {
+                    foreach(Swatch item in selected)
+                    {
+                        item.Stroke = Brushes.Black;
+                        item.StrokeThickness = 1;
+                    }
 
-            if (selectedSwatch is null)
-            {
-                selectedSwatch = swatch;
-            }
-            else if(ReferenceEquals(selectedSwatch, swatch))
-            {
-                previousSelection = swatch;             
-                selectedSwatch = null;
-            }
-            else
-            {
-                previousSelection = selectedSwatch;
-                selectedSwatch = swatch;
+                    selected.Clear();
+                }
             }
 
-            if (previousSelection is not null)
+            selected.Add(swatch);
+
+            foreach(Swatch item in selected)
             {
-                previousSelection.Stroke = Brushes.Black;
-                previousSelection.StrokeThickness = 1;
+                item.Stroke = Brushes.DarkCyan;
+                item.StrokeThickness = 2;
             }
-                
-            if (selectedSwatch is not null)
-            {
-                selectedSwatch.Stroke = Brushes.DarkCyan;
-                selectedSwatch.StrokeThickness = 2;
-            }
-                
         }
 
         //TODO code would be cleaner if subclass swatch and put stuff in that
@@ -222,11 +223,8 @@ namespace Monkeyshines
                         switch(mouseEvent.ChangedButton)
                         {
                             case MouseButton.Left:
-                                SelectSwatch(asSwatch);
-                                break;
                             case MouseButton.Right:
-                                if(!ReferenceEquals(selectedSwatch, asSwatch))
-                                    SelectSwatch(asSwatch);
+                                SelectSwatch(asSwatch);
                                 break;
                         }
                         break;
@@ -234,18 +232,30 @@ namespace Monkeyshines
                         switch(mouseEvent.ChangedButton)
                         {
                             case MouseButton.Right:
-                                ContextMenu menu = new() { PlacementTarget = asSwatch };
-
-                                if (CachedSwatches.Contains(asSwatch))
+                                contextMenu.Items.Clear();
+                                contextMenu.PlacementTarget = asSwatch;
+                                
+                                if(selected.Count > 1)
                                 {
-                                    menu.ItemsSource = dynamicSwatchMenuItems;
+                                    contextMenu.Items.Add(contextMenuOptions[ContextMenuOptions.MIX]);
+                                    contextMenu.Items.Add(contextMenuOptions[ContextMenuOptions.DELETE]);
                                 }
                                 else
                                 {
-                                    menu.ItemsSource = staticSwatchMenuItems;
+                                    if (ReferenceEquals(asSwatch, SwatchCurrent))
+                                    {
+                                        contextMenu.Items.Add(contextMenuOptions[ContextMenuOptions.CACHE]);                                        
+                                    }
+                                    else
+                                    {
+                                        contextMenu.Items.Add(contextMenuOptions[ContextMenuOptions.CURRENT]);
+                                        contextMenu.Items.Add(contextMenuOptions[ContextMenuOptions.DELETE]);
+                                    }
+
+                                    contextMenu.Items.Add(contextMenuOptions[ContextMenuOptions.COPY]);
                                 }
-                                
-                                menu.IsOpen = true;
+
+                                contextMenu.IsOpen = true;
                                 break;
                         }
                         break;
